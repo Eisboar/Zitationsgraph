@@ -1,0 +1,43 @@
+Teilaufgabe Preprocessing - Stand 27.12.2011
+Quelldateien (verschiedener Formate) sollen eingelesen und in die drei Hauptbereich HEAD, BODY und REFERENCES unterteilt werden, um sie als plain text weiteren Verarbeitungschritten zur Verfügung zu stellen.
+
+Ablauf
+Input: Dateipfad zu einer wissenschaftlichen Publikation
+process()
+verwendete Bibliotheken: Apache PDFBox, Apache Lucene
+Output: BaseDoc Objekt, das über String:get(String) Methode einsprechenden Text der Quelldatei zurück gibt. Außerdem wird mit der Apache Lucene Bibliothek für die Suche im Text dieser indiziert.
+
+Input: Digital Humanities Conference
+- Proceedings liegen als komplettes Buch vor
+- Unterteilung in Einzelpublikationen muss implementiert werden. 
+- Idee: Nutze 'Table of Contents' und vom Nutzer angegebene Anfangsseite(der PDF!) der ersten Publikation um in Einzelpublikationen zu teilen
+
+Müssen verschiedene Formate unterstützen: Hauptsächlich PDF aber auch XML für die DHQ.
+
+Falls PDF:
+- Datei mit PDFBox parsen
+- Regelbasiert Teile erkennen: Body beginnt in der Regel mit Überschrift "Introduction". Referenzliste mit "References" oder auch "Bibliography".
+- Womöglich weitere Regeln um Kandidatenregionen präzise auszuwählen: Body i.d.R. Fließtext, Referenzen i.d.R. Liste (verhältnismäßig viele Neuzeilen, Satz&Sonderzeichen). Eventuell Metainformationen der PDF Datei nutzen: Felder u.a. title, author.
+- mittels Apache Lucene Index über Body anlegen, um effiziente Suche zu ermöglichen
+
+Falls XML:
+- noch nicht endgültig implementiert
+- genügt Datei dem DHQ Schema?
+- dann Extraktion aller Daten hierachisch m�glich: Autorentag <dhq:authorInfos>, Zitationen Tag <cit> mit entsprechendem <bibl> Tag.
+- Auswertung und Erzeugung entsprechender Objekte (Publication, Document, Citation) sofort möglich.
+
+Falls andere Dateiendung
+- Versuch als reinen Text zu lesen
+- Teilextraktion ähnlich dem PDF
+
+Teilextraktion (aus Fließtext)
+- entsprechend Überschriften (Introduction, References oder Bibliography)
+- meist in eigener Zeile, ev. mit vorangestellter Kapitelnummerierung
+
+
+Aufwand Klaus Dezember (bisher) ca. 10 h
+- Recherche Zusatztools
+- Redesign Preprocessing Packet
+- Teilen von reinem Text anhand Brute Force Algorithmus
+- Begin der Arbeit am XML-Parser für DHQ (noch ca. 2 Wochen)
+- Buchsplitter: Recherche vorhandene Tools ergab nichts nennenswertes. Teilung anhand von Table of Contents als Plan, mit angegebenen Seitenthreshold - oder aber über Suche nach entsprechendem Titel. Noch zu implementieren - Dauer fpr erste Version ca. 2 Wochen.
