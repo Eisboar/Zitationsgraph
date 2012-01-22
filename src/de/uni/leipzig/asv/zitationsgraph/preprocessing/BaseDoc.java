@@ -31,8 +31,8 @@ public class BaseDoc {
 	public static final String HEAD = "head";
 	public static final String BODY = "body";
 	public static final String REFERENCES = "references";
-	
-	Logger logger = Logger.getLogger("root");
+	public static final boolean debug = false;
+	Logger logger = Logger.getLogger("ZitGraph");
 	
 	private String fileName;
 	private String fullText;
@@ -40,13 +40,12 @@ public class BaseDoc {
 	
 	public BaseDoc(String fileName) {
 		super();
-		this.setFileName(fileName);
+		setFileName(fileName);
 	}
 	
 	/**
 	 * Method to process the separation of a file.
 	 * @throws IOException 
-	 * @TODO implement.
 	 */
 	public void process() throws IOException {
 		String split[] = fileName.split("\\.");
@@ -56,15 +55,13 @@ public class BaseDoc {
 			process_pdf();
 		}
 		else if (split[split.length-1].equalsIgnoreCase("xml")) {
-			// TODO implement XML parser
-			logger.warning("Not supported yet.");
-			process_plainTextFile();
+			logger.warning("We support Parsing XML files of the DHQ. Use the DHQXMLParser.");
+			//process_plainTextFile();
 		} 
 		else {
 			// try to read plain text
 			logger.info("No PDF or XML file. Trying to read plain text from file...");
 			process_plainTextFile();
-			// TODO else throw NoSupportedFormatException ???
 		}
 		
 		if(fullText != null && fullText.length() > 0) {
@@ -102,6 +99,7 @@ public class BaseDoc {
 				}
             }
             // get full text
+            
             setFullText(getTextFromPDF(document));
             return document;
         }
@@ -124,7 +122,7 @@ public class BaseDoc {
      * @param document The PDDocument to get the data from.
      * @throws IOException If there is an error getting the page count.
      */
-    private String getTextFromPDF( PDDocument document ) throws IOException
+    protected static String getTextFromPDF( PDDocument document ) throws IOException
     {
     	PDFTextStripper stripper = new PDFTextStripper();
 		return stripper.getText(document);
@@ -193,53 +191,60 @@ public class BaseDoc {
 	public void splitFullText() {
 		Divider div = new Divider(fullText);
 		int bruteForceCertainty = div.determineBruteForceMethod();
-		logger.info("BruteForceValue = "+bruteForceCertainty);
-		if(bruteForceCertainty >= 2) {
-			logger.info("Applying brute force algorithm.");
+		if(debug)
+			logger.info("BruteForceValue = "+bruteForceCertainty);
+		if(bruteForceCertainty >= 1) {
+			if(debug)
+				logger.info("Applying brute force algorithm.");
 			div.splitByBruteForce();
 			head = div.head;
 			body = div.body;
 			references = div.tail;
 		}
+		else {
+			if(debug)
+				logger.warning("No splitting performed");
+		}
 		
-	}
-	
-	/*
-	private void printMetaData(PDDocument document) throws IOException {
-	//	document.getDocumentCatalog().
-		  PDDocumentInformation info = document.getDocumentInformation();
-	      System.out.println( "Page Count=" + document.getNumberOfPages() );
-	      System.out.println( "Title=" + info.getTitle() );
-	      System.out.println( "Author=" + info.getAuthor() );
-	      System.out.println( "Subject=" + info.getSubject() );
-	      System.out.println( "Keywords=" + info.getKeywords() );
-	      System.out.println( "Creator=" + info.getCreator() );
-	      System.out.println( "Producer=" + info.getProducer() );
-	      System.out.println( "Creation Date=" + info.getCreationDate() );
-	      System.out.println( "Modification Date=" + info.getModificationDate());
-	      System.out.println( "Trapped=" + info.getTrapped() ); 
-	}
-	*/
-	
-	
+	}	
+
 	public static void main(String args[]) throws IOException, CryptographyException {
 		String filePath = "examples/journal.pone.0027856.pdf";
 		filePath = "examples/Ngonga Ermilov - Complex Linking in a Nutshel.pdf";
 		filePath = "examples/text.txt";
+		filePath = "examples/Lit Linguist Computing-2010-Craig-37-52.pdf";
+		filePath = "examples/Lit Linguist Computing-2008-Windram-443-63.pdf";
+		filePath = "examples/Lit/2011/323.full.pdf";
+		//filePath = "examples/Lit/2011/Lit Linguist Computing-2011-Sainte-Marie-329-34.pdf";
+		filePath = "examples/Lit/2009/Lit Linguist Computing-2009-Fraistat-9-18.pdf";
 		// Books need to be split.
 		//	filePath = "C:/Users/Lyko/Desktop/Textmining datasets/Publikationsdaten/Digital Humanities Conference/2007/dh2007abstractsrevised.pdf";
+		
 		BaseDoc doc = new BaseDoc(filePath);
 		try {
 			doc.process();
 			System.out.println(doc.get(HEAD));
 			System.out.println("=======================");
-		/*	System.out.println(doc.get(BODY));
+		//	System.out.println(doc.get(BODY));
 			System.out.println("=======================");
 			System.out.println(doc.get(REFERENCES));
-		*/
+		
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public void setField(String name, String value) {
+		if(name.equalsIgnoreCase(HEAD))
+			head = value;
+		else if (name.equalsIgnoreCase(BODY))
+			body = value;
+		else if (name.equalsIgnoreCase(REFERENCES))
+			references=value;
+		else 
+			if(debug)
+				logger.warning("Trying to set unknown field "+name);
+		
 	}
 	
 }

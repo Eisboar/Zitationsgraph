@@ -2,6 +2,8 @@ package de.uni.leipzig.asv.zitationsgraph.preprocessing;
 
 import java.util.StringTokenizer;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Class to split scientific papers into the three parts. We assume that we have only the plain text with line
@@ -19,6 +21,9 @@ import java.util.logging.Logger;
 public class Divider {
 	
 	Logger logger = Logger.getLogger("ZitGraph");
+	public static final boolean debug = false;
+	
+	//public static String[] refBoundaries = {"Notes", "Note", "Appendix"};
 	
 	/**
 	 * Holding full text of a scientific paper to be divided.
@@ -49,48 +54,39 @@ public class Divider {
 	 */
 	public int determineBruteForceMethod() {
 		int quality = 0;
-		
-		int headCount = fullText.split("Introduction").length-1;
-		int referenceCount = fullText.split("References").length-1;
-		int bibliographyCount = fullText.split("Bibliography").length-1;
-		if(headCount < 1) {
-			logger.warning("Unable to determine Introduction without any doubt.");
-		} else {
-			introName = "Introduction";
+		int headCount = countOccurrenceOfHeading(fullText, "Introduction");
+		int referenceCount = countOccurrenceOfHeading(fullText, "References");
+		int bibliographyCount = countOccurrenceOfHeading(fullText, "Bibliography");
+		introName = "Introduction";
 			if(referenceCount == 0 && bibliographyCount == 0) {
-				logger.warning("Wasn't able to find either 'References' or 'Bibliography' to mark tail.");
+				if(debug)
+					logger.warning("Wasn't able to find either 'References' or 'Bibliography' to mark tail.");
 			}
-			if(referenceCount == 1 && bibliographyCount == 0) {
-				logger.info("Using 'Introduction' and 'References'");
-				extroName = "References";
-			//	splitBy("Introduction", "References");
-				
-			}
-			if(referenceCount == 0 && bibliographyCount == 1) {
-				logger.info("Using 'Introduction' and 'Bibliography'");
-				extroName = "Bibliography";
-				//splitBy("Introduction", "Bibliography");
-			}
-			if(referenceCount > 0 && bibliographyCount>0) {
-				logger.info("Both appearing 'References' and 'Bibliography' atleast once.");
-				logger.info("'References' count = "+referenceCount);
-				logger.info("'Bibliography' count = "+bibliographyCount);				
-				// As of now we suspect that the lower occurrence points to the better solution
-				// TODO use just the last occurrence of either part
-				if(referenceCount <= bibliographyCount) {
+			if(referenceCount >= 1 && bibliographyCount == 0) {
+				if(debug)
 					logger.info("Using 'Introduction' and 'References'");
+				extroName = "References";		
+			}
+			if(referenceCount == 0 && bibliographyCount >= 1) {
+				if(debug)
+					logger.info("Using 'Introduction' and 'Bibliography'");
+				extroName = "Bibliography";
+			}
+			if(referenceCount > 0 && bibliographyCount > 0) {
+				if(debug)
+					logger.info("Both appearing 'References' and 'Bibliography' atleast once.");
+				if(referenceCount <= bibliographyCount) {
+					if(debug)
+						logger.info("Using 'Introduction' and 'References'");
 					extroName = "References";
 				}
 				else {
-					logger.info("Using 'Introduction' and 'Bibliography'");
+					if(debug)
+						logger.info("Using 'Introduction' and 'Bibliography'");
 					extroName = "Bibliography";
-				}
-					
-			}
-		}
-		
+				}					
+			}		
 		quality += headCount + referenceCount + bibliographyCount;
-		
 		return quality;
 	}
 	
@@ -112,24 +108,125 @@ public class Divider {
 		body = fullText;
 		head = fullText;
 		tail = fullText;
-		//first try to find references
-		int ref = fullText.lastIndexOf(extro);
-		if(ref > -1) {
-			tail = fullText.substring(ref+extro.length());
-			body = fullText.substring(0, ref);
-		}else {
-			logger.info("Wasn't able to find '"+extro+"' to split tail and body.");
-		}
+		
+		//split references
+		splitTail(extro);
 		
 		//try to get head
-		int introPos = fullText.indexOf(intro);
-		if(introPos>-1) {
-			head = body.substring(0, introPos);
-			body = body.substring(introPos);
+		int introPos = body.indexOf(intro);
+	//	logger.info("Split Intro ar "+introPos);
+	
+		splitHead(intro);
+		
+	}
+	
+	private void splitHead(String intro) {
+		
+		Pattern pattern = Pattern.compile("\\s[0-9]*"+intro+"\\n");
+		Matcher matcher = pattern.matcher(fullText);
+		if(matcher.find()) {
+			if(debug)
+				logger.info("Found "+intro+" at "+matcher.end());
+			head = fullText.substring(0, matcher.start());
+		}else {
+			// try "...." after Abstract
+			Pattern abstractPattern = Pattern.compile("\\s[0-9]*Abstract\\s");
+			Matcher abstractMatcher = abstractPattern.matcher(fullText);
+			int abstractOffSet = 0;
+			if(abstractMatcher.find()) {
+				abstractOffSet = abstractMatcher.end();
+			}
+			Pattern pointPattern = Pattern.compile("\\.{4,}");
+			Matcher pointMatcher = pointPattern.matcher(fullText);
+			while(pointMatcher.find()) {
+				if(pointMatcher.end()>abstractOffSet){
+					head=fullText.substring(0, pointMatcher.end());
+					fullText=fullText.substring(pointMatcher.end());
+					return;
+				}
+			}
+			// Apparently abstract wasn't divided by points
+			splitByHeading();
 		}
-		else {
-			logger.info("Wasn't able to find '"+intro+"' to split head and body.");
+			
+	}
+	
+	private void splitTail(String extro)  {
+		//first try to find references
+		Pattern pattern = Pattern.compile("\\s[0-9]*"+extro+"\\s");
+		Matcher matcher = pattern.matcher(fullText);		
+		if(matcher.find())  {
+			matcher.reset();
+			while(matcher.find()){
+				tail = fullText.substring(matcher.end());
+				body = fullText.substring(0, matcher.start());
+			}
+		//limit 
+		int limitOffSet = -1;
+		// for each possible heading of the limit
+		//create patter, get first occurrence in tail
+		Pattern limitPattern = Pattern.compile("^(Note|Notes|Appendix ).{0,5}$", Pattern.MULTILINE);
+		Matcher limitMatcher = limitPattern.matcher(tail);
+		while(limitMatcher.find()) {
+			if(limitOffSet == -1)
+				limitOffSet = limitMatcher.start();
+			if(limitOffSet > limitMatcher.start())
+				limitOffSet = limitMatcher.start();
+		}
+		if(limitOffSet > -1) {
+			if(debug)
+				logger.info("Limiting Reference part until "+limitOffSet+" that is "+tail.substring(limitOffSet, limitOffSet+12));
+			tail = tail.substring(0, limitOffSet);
+		}
+		}else {
+			if(debug)
+				logger.info("Wasn't able to find '"+extro+"' to split tail and body. So we try to split by last heading");
+			Pattern headingPattern = Pattern.compile("^[0-9]*[A-Z][a-zA-Z].{0,5}$", Pattern.MULTILINE);
+			Matcher headingMatcher = headingPattern.matcher(fullText);
+			while(headingMatcher.find()) {
+				if(debug)
+					logger.info("Heading found to split tail: "+headingMatcher.group());
+				tail = fullText.substring(headingMatcher.end()+1);
+				body = fullText.substring(0, headingMatcher.start());
+			}
+			
+		}
+	}
+
+	/**
+	 * Method to split a text by headings.
+	 * As of now we assume a Heading has a leading number followed by a whitespace character 
+	 * and some text beginning with upper case letters, such as "3 Related Work"
+	 */
+	private void splitByHeading() {
+		Pattern pattern = Pattern.compile("^[0-9]+\\s[A-Z].*", Pattern.MULTILINE);
+		Matcher matcher;
+		int add = 0;
+		// try to find headings after abstract
+		Pattern abstractPattern = Pattern.compile("^(Abstract).{0,5}$", Pattern.MULTILINE);
+		Matcher abstractMatcher = abstractPattern.matcher(body);
+		if(abstractMatcher.find()) {
+			add = abstractMatcher.end();
+			matcher = pattern.matcher(body.substring(abstractMatcher.end()));
+		} else {
+			matcher = pattern.matcher(body);
+		}		
+		
+		if(matcher.find()) {
+			// found at least once
+			if(debug)
+				logger.info("Splitting by heading at "+add+matcher.start()+ " which is the heading: "+matcher.group());
+			head = body.substring(0, add+matcher.start());
+			body = body.substring(add+matcher.start());
 		}
 	}
 	
+	private int countOccurrenceOfHeading(String text, String heading) {
+		int count = 0;
+		Pattern pattern = Pattern.compile("\\s[0-9]*"+heading+"\\s");
+		Matcher matcher = pattern.matcher(text);
+		while(matcher.find())
+			count++;
+		return count;
+	}
 }
