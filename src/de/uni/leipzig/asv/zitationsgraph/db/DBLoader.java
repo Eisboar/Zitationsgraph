@@ -5,6 +5,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Date;
+
+import sun.dc.DuctusRenderingEngine;
 
 import de.uni.leipzig.asv.zitationsgraph.data.*;
 
@@ -89,54 +92,39 @@ public class DBLoader {
 	}
 	
 	
+	/**
+	 * Method to create the DB named 'GRAPH'
+	 */
 	public void dbCreate(){
 		System.out.println("try to created DB...");
 		String errorMessage = "Couldn't create DB";
 		executeStatement(DB_CREATE, errorMessage);
 	}
 	
+	/**
+	 * Method to drop the DB 'GRAPH'
+	 */
 	public void dbDrop(){
 		System.out.println("try to drop DB...");
 		String errorMessage = "Couldn't drop DB";
 		executeStatement(DB_DROP, errorMessage);
 	}
 	
+	/**
+	 * Method to activate the MySQL-DB
+	 */
 	public void db_use(){
 		System.out.println( "try to select Graph-DB..." );
 		String errorMessage = "Couldn't select Graph-DB";
 		executeStatement(DB_USE, errorMessage);
 	}
 	
-	public void createVenueTable(){
-		System.out.println("try to created Venue-Table...");
-		String errorMessage = "Couldn't create Venue-Table";
-		executeStatement(VENUE_TABLE_CREATE, errorMessage);
-	}
 	
-	public void createAuthorTable(){
-		System.out.println("try to created Author-Table...");
-		String errorMessage = "Couldn't create Author-Table";
-		executeStatement(AUTHOR_TABLE_CREATE, errorMessage);
-	}
+	//create Tables
 	
-	public void createPublicationTable(){
-		System.out.println("try to created Publication-Table...");
-		String errorMessage = "Couldn't create Publication-Table";
-		executeStatement(PUBLICATION_TABLE_CREATE, errorMessage);
-	}
-	
-	public void createPublishedTable(){
-		System.out.println("try to created Published-Table...");
-		String errorMessage = "Couldn't create Published-Table";
-		executeStatement(PUBLISHED_TABLE_CREATE, errorMessage);
-	}
-	
-	public void createCitedTable(){
-		System.out.println("try to created Cited-Table...");
-		String errorMessage = "Couldn't create Cited-Table";
-		executeStatement(CITED_TABLE_CREATE, errorMessage);
-	}
-	
+	/**
+	 * Method to Drop all Tables
+	 */
 	public void createTables(){
 		createVenueTable();
 		createAuthorTable();
@@ -145,35 +133,36 @@ public class DBLoader {
 		createCitedTable();
 	}
 	
-	public void dropCitedTable(){
-		System.out.println("try to drop Cited-Table...");
-		String errorMessage = "Couldn't drop Cited-Table";
-		executeStatement(CITED_TABLE_DROP, errorMessage);
+	private void createVenueTable(){
+		System.out.println("try to created Venue-Table...");
+		String errorMessage = "Couldn't create Venue-Table";
+		executeStatement(VENUE_TABLE_CREATE, errorMessage);
 	}
 	
-	public void dropVenueTable(){
-		System.out.println("try to drop Venue-Table...");
-		String errorMessage = "Couldn't drop Venue-Table";
-		executeStatement(VENUE_TABLE_DROP, errorMessage);
+	private void createAuthorTable(){
+		System.out.println("try to created Author-Table...");
+		String errorMessage = "Couldn't create Author-Table";
+		executeStatement(AUTHOR_TABLE_CREATE, errorMessage);
 	}
 	
-	public void dropAuthorTable(){
-		System.out.println("try to drop Author-Table...");
-		String errorMessage = "Couldn't drop Author-Table";
-		executeStatement(AUTHOR_TABLE_DROP, errorMessage);
+	private void createPublicationTable(){
+		System.out.println("try to created Publication-Table...");
+		String errorMessage = "Couldn't create Publication-Table";
+		executeStatement(PUBLICATION_TABLE_CREATE, errorMessage);
 	}
 	
-	public void dropPublicationTable(){
-		System.out.println("try to drop Publication-Table...");
-		String errorMessage = "Couldn't drop Publication-Table";
-		executeStatement(PUBLICATION_TABLE_DROP, errorMessage);
+	private void createPublishedTable(){
+		System.out.println("try to created Published-Table...");
+		String errorMessage = "Couldn't create Published-Table";
+		executeStatement(PUBLISHED_TABLE_CREATE, errorMessage);
 	}
 	
-	public void dropPublishedTable(){
-		System.out.println("try to drop Published-Table...");
-		String errorMessage = "Couldn't drop Published-Table";
-		executeStatement(PUBLISHED_TABLE_DROP, errorMessage);
+	private void createCitedTable(){
+		System.out.println("try to created Cited-Table...");
+		String errorMessage = "Couldn't create Cited-Table";
+		executeStatement(CITED_TABLE_CREATE, errorMessage);
 	}
+	
 	
 	public void dropTables(){
 		dropCitedTable();
@@ -183,7 +172,43 @@ public class DBLoader {
 		dropVenueTable();
 	}
 	
+	//drop Tables
+	private void dropCitedTable(){
+		System.out.println("try to drop Cited-Table...");
+		String errorMessage = "Couldn't drop Cited-Table";
+		executeStatement(CITED_TABLE_DROP, errorMessage);
+	}
 	
+	private void dropVenueTable(){
+		System.out.println("try to drop Venue-Table...");
+		String errorMessage = "Couldn't drop Venue-Table";
+		executeStatement(VENUE_TABLE_DROP, errorMessage);
+	}
+	
+	private void dropAuthorTable(){
+		System.out.println("try to drop Author-Table...");
+		String errorMessage = "Couldn't drop Author-Table";
+		executeStatement(AUTHOR_TABLE_DROP, errorMessage);
+	}
+	
+	private void dropPublicationTable(){
+		System.out.println("try to drop Publication-Table...");
+		String errorMessage = "Couldn't drop Publication-Table";
+		executeStatement(PUBLICATION_TABLE_DROP, errorMessage);
+	}
+	
+	private void dropPublishedTable(){
+		System.out.println("try to drop Published-Table...");
+		String errorMessage = "Couldn't drop Published-Table";
+		executeStatement(PUBLISHED_TABLE_DROP, errorMessage);
+	}
+	
+
+
+	/**
+	 * Standard method to execute an SQL-statement 
+	 * @param String Query, String errorMessage
+	 */
 	private void executeStatement(String query, String errorMessage){
 		try{
 			statement = connection.createStatement();
@@ -193,14 +218,92 @@ public class DBLoader {
 			System.out.println( errorMessage );
 			System.out.println(e);
 		}finally{
-			try{
-				if(statement!=null)
-		        	 statement.close();
-		    }catch(SQLException e){
-		    	System.out.println( "Couldn't close Statement!" );
-		    	System.out.println(e);
-		    }
+			closeStatement();
 		}
 	}
 	
+	
+	private void closeStatement(){
+		try{
+			if(statement!=null)
+	        	 statement.close();
+	    }catch(SQLException e){
+	    	System.out.println( "Couldn't close Statement!" );
+	    	System.out.println(e);
+	    }
+	}
+	
+	private void closePreparedStatement(){
+		try{
+			if(preparedStatement!=null)
+	        	 preparedStatement.close();
+	    }catch(SQLException e){
+	    	System.out.println( "Couldn't close PreparedStatement!" );
+	    	System.out.println(e);
+	    }
+	}
+	
+	
+	private void saveAuthor(Author author){
+		try {
+			preparedStatement = connection.prepareStatement(INSERT_AUTHOR);
+			preparedStatement.setString(1, author.getName());
+			preparedStatement.setString(2, author.getAffiliation());
+			preparedStatement.executeUpdate();
+		}catch( SQLException e ){
+			System.out.println( "Couldn't insert Author" );
+	    	System.out.println(e);
+		} finally {
+		      closePreparedStatement();
+		}
+	}
+	
+	private void saveVenue(Date year, String name){
+		//int venueID=-1;
+		try {
+			preparedStatement = connection.prepareStatement(INSERT_VENUE);
+			preparedStatement.setString(1, name);
+			preparedStatement.setInt(2, year.getYear()); //TODO: change Date
+			preparedStatement.executeUpdate();
+		}catch( SQLException e ){
+			System.out.println( "Couldn't insert Author" );
+	    	System.out.println(e);
+		} finally {
+		      closePreparedStatement();
+		}
+		//return venueID;
+	}
+	
+	
+	private void savePublication(Publication publication){
+		try {
+			preparedStatement = connection.prepareStatement(INSERT_PUBLICATION);
+			preparedStatement.setString(1, publication.getTitle());
+			preparedStatement.setString(2, publication.getVenue());
+			preparedStatement.executeUpdate();
+		}catch( SQLException e ){
+			System.out.println( "Couldn't insert Author" );
+	    	System.out.println(e);
+		} finally {
+		      closePreparedStatement();
+		}
+	}
+	
+	/**
+	 * Method for writing a Document into the DB
+	 * @param publication
+	 */
+	public void saveDocument(Document document){
+		Publication publication = document.getPublication();
+		saveVenue(publication.getYear(), publication.getVenue());
+		savePublication(publication);
+		for (Author author : publication.getAuthors())
+		{
+		    saveAuthor(author);
+		}
+		for (Citation citation: document.getCitations())
+		{
+		    savePublication(citation.getPublication());
+		}
+	}	
 }
